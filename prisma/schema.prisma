@@ -1,0 +1,129 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  avatarUrl     String?
+  role          String    @default("user") // "admin" | "user"
+  plan          String    @default("free") // "free" | "pro" | "agency"
+  searchesLimit Int       @default(100)
+  searchesUsed  Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  leads         Lead[]
+  audits        Audit[]
+  websites      WebsiteProject[]
+  logs          ActivityLog[]
+  competitors   CompetitorComparison[]
+}
+
+model Lead {
+  id                  String    @id @default(cuid())
+  userId              String?
+  user                User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName        String
+  category            String
+  crm                 String    @default("None") // "Wix", "Shopify", "WordPress", etc.
+  address             String?
+  city                String?
+  phone               String?
+  email               String?
+  website             String?
+  websiteStatus       String    @default("none") // "none" | "active" | "broken" | "under_construction"
+  rating              Float     @default(0)
+  reviewCount         Int       @default(0)
+  googleMapsUrl       String?
+  opportunityScore    Int       @default(75)
+  opportunityTier     String    @default("Medium") // "High" | "Medium" | "Low"
+  recommendedServices String?   // JSON string array e.g. ["New Website Build", "Online Booking"]
+  status              String    @default("New") // "New" | "Contacted" | "In Conversation" | "Closed Won" | "Closed Lost"
+  notes               String?   // User notes or markdown
+  tags                String?   // Comma-separated or JSON
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([category])
+  @@index([crm])
+  @@index([status])
+}
+
+model Audit {
+  id               String    @id @default(cuid())
+  userId           String?
+  user             User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  url              String
+  businessName     String
+  businessType     String?
+  overallScore     Int
+  summary          String
+  scores           String    // JSON: { performance, mobile, seo, security, modernCms }
+  metrics          String    // JSON: { responseTimeMs, scriptCount, hasSsl, hasViewport, detectedCms, etc. }
+  issues           String    // JSON: string[] or object[]
+  actionPlan       String    // JSON: string[] or object[]
+  outreachMessages String?   // JSON: { email, linkedin, whatsapp, instagramDm }
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([url])
+}
+
+model WebsiteProject {
+  id           String    @id @default(cuid())
+  userId       String?
+  user         User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug         String    @unique
+  title        String
+  businessName String
+  industry     String?
+  description  String?
+  theme        String?   // JSON: { primaryColor, accentColor, font, mode }
+  pages        String    // JSON: page content and layouts
+  published    Boolean   @default(false)
+  customDomain String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([slug])
+}
+
+model CompetitorComparison {
+  id             String    @id @default(cuid())
+  userId         String?
+  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  targetUrl      String
+  targetName     String?
+  competitorUrls String    // JSON string array
+  comparisons    String    // JSON array of metrics & benchmark results
+  winner         String?
+  takeaways      String?   // JSON string array
+  createdAt      DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model ActivityLog {
+  id        String    @id @default(cuid())
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String    // "SEARCH_PERFORMED", "LEAD_SAVED", "AUDIT_RUN", "WEBSITE_PUBLISHED", "OUTREACH_GENERATED"
+  details   String?   // JSON or text description
+  ipAddress String?
+  timestamp DateTime  @default(now())
+
+  @@index([userId])
+  @@index([action])
+}
+
